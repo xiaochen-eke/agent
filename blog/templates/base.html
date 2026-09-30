@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ site_title }}{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="scanlines"></div>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="{{ url_for('index') }}"><span class="brand-prompt">&gt;_</span> {{ site_title }}</a>
+    <span class="subtitle">{{ site_subtitle }}</span>
+    <nav>
+      <a href="{{ url_for('index') }}">首页</a>
+      <a href="{{ url_for('archive') }}">归档</a>
+      <a href="{{ url_for('tags_view') }}">标签</a>
+      <a href="{{ url_for('search') }}">搜索</a>
+      <a href="{{ url_for('about') }}">关于</a>
+      <a href="{{ url_for('admin_login') }}">管理</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  {% with msgs = get_flashed_messages() %}
+    {% if msgs %}<div class="flash">{% for m in msgs %}<p>{{ m }}</p>{% endfor %}</div>{% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <p>{{ site_title }} · {{ site_subtitle }} · Powered by Flask</p>
+</footer>
+</body>
+</html>

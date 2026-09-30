@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 环境变量 / 密钥（绝不上传）
+.env
+.env.local
+.env.*.local
+
+# 数据库 / 向量库 / 模型权重（本地生成物）
+*.db
+*.sqlite3
+*.sqlite
+*.bin
+*.zip
+chroma_db/
+lora_model/
+lora_data/
+knowledge_base/__pycache__/
+
+# 前端构建产物与依赖
+node_modules/
+build/
+dist/
+
+# 用户数据 / 运行时状态
+users.json
+history.json
+*.log
+
+# 系统
+.DS_Store
+Thumbs.db

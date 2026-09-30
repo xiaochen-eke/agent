@@ -1,0 +1,9 @@
+  # 方式A：原生 JSON Schema
+  python agent_main.py --test 1 --method native
+
+  # 方式B：LangChain @tool
+  python agent_main.py --test 1 --method langchain
+
+  # 交互模式（默认方式A）
+  python agent_main.py --interactive
+  python agent_main.py --interactive --method langchain

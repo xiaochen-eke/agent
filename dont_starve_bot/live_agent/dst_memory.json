@@ -1,0 +1,5 @@
+{
+  "memory": "{\"next_action\":{\"action\":\"gather\",\"item\":\"浆果\",\"target\":\"白天安全区域\"},\"reason\":\"状态未知，优先保证食物与生存；白天就近采集浆果或胡萝卜，避免夜晚和远行。\",\"contingency_actions\":[{\"action\":\"eat\",\"item\":\"浆果\",\"target\":\"自身\"},{\"action\":\"craft\",\"item\":\"火把\",\"target\":null},{\"action\":\"gather\",\"item\":\"草\",\"target\":\"附近\"},{\"action\":\"gather\",\"item\":\"树枝\",\"target\":\"附近\"},{\"action\":\"craft\",\"item\":\"斧头\",\"target\":null}],\"timeline\":[{\"day\":1,\"action\":\"gather 浆果 白天安全区域\"},{\"day\":1,\"action\":\"gather 草 附近\"},{\"day\":1,\"action\":\"gather 树枝 附近\"},{\"day\":2,\"action\":\"craft 火把 null\"},{\"day\":3,\"action\":\"craft 科学机器 null\"},{\"day\":5,\"action\":\"build 营火 营地\"},{\"day\":7,\"action\":\"craft 背包 null\"},{\"day\":10,\"action\":\"craft 保暖石 null\"},{\"day\":15,\"action\":\"craft 冬帽 null\"},{\"day\":20,\"action\":\"gather 木柴 营地附近\"}],\"risks\":[\"尚未收到游戏状态，无法确认饥饿值、背包物资、时间与周围安全性\",\"夜晚或危险区域采集可能遭怪物袭击\",\"食物腐烂或不足会导致饥饿掉血\",\"附近缺少浆果或胡萝卜时采集计划会落空\",\"冬天前未备好保暖石、冬帽和木柴会冻伤\",\"低饥饿时远行或战斗会增加死亡风险\"]}",
+  "last_action": "立刻捡起阿比盖尔之花召唤阿比盖尔，让她吸引并攻击爬行暗影；同时往火萤方向撤退，保持距离，不要硬打爬行暗影，撑到天亮或回安全区。",
+  "updated_at": 1790591879.832214
+}

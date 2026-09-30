@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel login-box">
+  <h1 class="term-h1">// ADMIN LOGIN<span class="cursor">▌</span></h1>
+  <form method="post" action="{{ url_for('admin_login_post') }}">
+    <label>账号
+      <input name="username" autocomplete="username" value="admin">
+    </label>
+    <label>密码
+      <input name="password" type="password" autocomplete="current-password">
+    </label>
+    <button type="submit">登录</button>
+  </form>
+</section>
+{% endblock %}

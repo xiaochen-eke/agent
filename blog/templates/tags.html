@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="posts-head"><h1 class="term-h1">标签<span class="cursor">▌</span></h1></section>
+<div class="tag-cloud panel">
+  {% for t, c in tags %}
+    <a class="tag" href="{{ url_for('tag_view', tag=t) }}">{{ t }} <em>{{ c }}</em></a>
+  {% else %}
+    <p class="empty">暂无标签</p>
+  {% endfor %}
+</div>
+{% endblock %}

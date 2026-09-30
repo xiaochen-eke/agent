@@ -1,0 +1,10 @@
+name = "Dify Live Co-pilot Collector"
+description = "采集玩家实时状态(三围/背包/装备/季节/附近实体)，写盘供本地 Dify 智能体分析，并把 AI 建议回灌游戏内播报。"
+author = "you"
+version = "1.0.0"
+forumthread = ""
+api_version = 10
+dst_compatible = true
+all_clients_require_mod = false
+client_only_mod = false
+server_filter_tags = {}

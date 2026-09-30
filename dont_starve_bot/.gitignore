@@ -1,0 +1,31 @@
+# 环境变量（含 API 密钥）
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+frontend/build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 数据库
+*.db
+chroma_db/
+
+# LoRA 模型（太大，不提交）
+lora_model/
+lora_data/
+
+# 日志
+*.log

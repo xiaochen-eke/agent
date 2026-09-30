@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>三版本 Agent 对比 · 饥荒物品顾问</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* 微信登录 / 用户条（复用 --accent/--mono 变量，保持赛博终端风） */
+    #login { display: flex; align-items: center; justify-content: center; min-height: 76vh; }
+    #login.hidden { display: none; }
+    .login-panel { max-width: 420px; width: 100%; text-align: center; padding: 46px 40px; }
+    .login-kicker { color: var(--accent); letter-spacing: 2px; font-size: 13px; margin-bottom: 14px; }
+    .login-panel h1 { font-size: 28px; margin: 0 0 10px; }
+    .login-sub { opacity: .65; font-size: 14px; margin: 0 0 26px; }
+    .login-btn { display: inline-block; width: 100%; padding: 14px 20px; font-family: var(--mono);
+      font-size: 16px; color: var(--bg); background: var(--accent); border: 1px solid var(--accent);
+      cursor: pointer; box-shadow: 0 0 18px var(--glow-soft); }
+    .login-btn:hover { filter: brightness(1.12); box-shadow: 0 0 26px var(--glow); }
+    .login-hint { margin-top: 16px; font-size: 12px; opacity: .5; }
+    .login-qr { margin: 18px auto 0; padding: 10px; background: #fff; display: inline-block; box-shadow: 0 0 20px var(--glow-soft); }
+    .login-qr.hidden { display: none; }
+    .login-qr img { display: block; width: 200px; height: 200px; }
+    .login-msg { margin-top: 14px; font-size: 13px; color: var(--accent); min-height: 18px; }
+    .auth-bar { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 14px; }
+    .auth-bar.hidden { display: none; }
+    #auth-avatar { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--accent); }
+    .login-btn.hidden { display: none; }
+    .login-btn-google { background: transparent; color: var(--accent); border: 1px solid var(--accent); margin-top: 10px; box-shadow: none; }
+    .login-btn-google:hover { background: rgba(255,255,255,.08); box-shadow: 0 0 18px var(--glow-soft); }
+    .login-skip { margin-top: 14px; font-size: 13px; opacity: .7; }
+    #login-entry { margin-top: 16px; }
+    #login-entry.hidden { display: none; }
+    /* 游客额度角标 + 滑块人机验证 */
+    .quota-badge { position: fixed; left: 14px; bottom: 14px; z-index: 60; font-family: var(--mono);
+      font-size: 12px; color: var(--accent); padding: 6px 10px; border: 1px solid var(--accent);
+      background: rgba(0,0,0,.55); letter-spacing: 1px; }
+    .quota-badge.hidden { display: none; }
+    .slider-modal { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center;
+      justify-content: center; background: rgba(0,0,0,.62); backdrop-filter: blur(6px); }
+    .slider-modal.hidden { display: none; }
+    .slider-box { max-width: 360px; width: 92%; padding: 18px 20px 20px; text-align: center;
+      border-radius: 14px;
+      background: linear-gradient(160deg, rgba(16,28,18,.92), rgba(6,12,8,.95));
+      border: 1px solid rgba(124,255,79,.28);
+      box-shadow: 0 0 0 1px rgba(124,255,79,.06), 0 0 34px var(--glow-soft), inset 0 0 24px rgba(124,255,79,.05);
+      backdrop-filter: blur(12px); }
+    .slider-box.shake { animation: cap-shake .42s; }
+    @keyframes cap-shake {
+      0%,100% { transform: translateX(0); } 20% { transform: translateX(-9px); }
+      40% { transform: translateX(9px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
+    .slider-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .slider-title { color: var(--accent); letter-spacing: 2px; font-size: 13px; }
+    .slider-timer { font-size: 12px; color: var(--accent); opacity: .75; letter-spacing: 1px;
+      font-variant-numeric: tabular-nums; }
+    .slider-close { background: none; border: none; color: #cfe9d0; opacity: .55; cursor: pointer;
+      font-size: 14px; line-height: 1; }
+    .slider-close:hover { opacity: 1; }
+    #captcha-canvas { display: block; width: 300px; height: 160px; margin: 0 auto; cursor: default;
+      touch-action: none; user-select: none; border-radius: 8px; box-shadow: 0 0 22px var(--glow-soft); }
+    .slider-track { position: relative; height: 40px; margin: 14px auto 0; width: 300px; max-width: 100%;
+      border: 1px solid rgba(124,255,79,.35); border-radius: 22px;
+      background: rgba(0,0,0,.45); overflow: hidden; cursor: pointer; user-select: none; touch-action: none; }
+    .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+      background: linear-gradient(90deg, rgba(124,255,79,.25), rgba(124,255,79,.45)); }
+    .slider-track.success { border-color: #33ff77; }
+    .slider-track.success .slider-fill { background: linear-gradient(90deg, rgba(51,255,119,.3), rgba(51,255,119,.55)); }
+    .slider-track-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; letter-spacing: 1px; color: #cfe9d0; opacity: .85; pointer-events: none; }
+    .slider-handle { position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 38px; height: 38px; border-radius: 50%; cursor: grab;
+      background: linear-gradient(135deg, #b6ff9a, var(--accent));
+      color: #04120a; display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; box-shadow: 0 0 12px rgba(124,255,79,.7); }
+    .slider-handle.ok { background: linear-gradient(135deg, #9fffbe, #33ff77); box-shadow: 0 0 16px #33ff77; }
+    .slider-foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .slider-msg { font-size: 12px; min-height: 16px; color: var(--accent); text-align: left; flex: 1; }
+    .slider-attempts { font-size: 11px; color: #cfe9d0; opacity: .7; letter-spacing: 1px; white-space: nowrap; }
+    .slider-refresh { background: none; border: 1px solid rgba(124,255,79,.35); color: var(--accent);
+      font-family: inherit; font-size: 12px; padding: 3px 10px; border-radius: 4px; cursor: pointer;
+      letter-spacing: 1px; transition: .15s; white-space: nowrap; }
+    .slider-refresh:hover { border-color: var(--accent); box-shadow: 0 0 10px var(--glow-soft); }
+  </style>
+  <script>
+    // 提前应用已保存的主题/字号，避免刷新时闪烁
+    (function () {
+      var d = document.documentElement;
+      try {
+        var t = localStorage.getItem('ac_theme') || 'dark';
+        var a = localStorage.getItem('ac_accent') || 'amber';
+        var fs = parseFloat(localStorage.getItem('ac_fs')) || 16;
+        d.setAttribute('data-theme', t);
+        d.setAttribute('data-accent', a);
+        d.style.setProperty('--fs', fs + 'px');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div id="crt-vignette"></div>
+
+  <!-- 主题控制条 -->
+  <div id="ctl">
+    <button class="ctl-btn" id="theme-toggle" title="切换亮色/暗色主题">🌙</button>
+    <span class="ctl-sep"></span>
+    <button class="ctl-btn" id="fs-down" title="缩小字号">A−</button>
+    <span class="fs-val" id="fs-val">16px</span>
+    <button class="ctl-btn" id="fs-up" title="放大字号">A＋</button>
+    <span class="ctl-sep"></span>
+    <div class="accents" id="accents">
+      <i class="dot" data-accent="green" title="荧光绿"></i>
+      <i class="dot" data-accent="cyan" title="霓虹青"></i>
+      <i class="dot" data-accent="amber" title="琥珀金"></i>
+      <i class="dot" data-accent="violet" title="霓虹紫"></i>
+    </div>
+  </div>
+
+  <!-- 封面 / 饥荒动态展示页（角色原画轮播） -->
+  <main id="landing" class="view landing">
+    <div id="ds-scene" aria-hidden="true">
+      <div id="ds-sun"></div>
+      <div id="ds-ground"></div>
+
+      <svg class="ds-tree tl" viewBox="0 0 100 150"><path d="M50 4 L80 46 L62 46 L88 86 L66 86 L50 150 L34 86 L12 86 L38 46 L20 46 Z" fill="#160d0b"/></svg>
+      <svg class="ds-tree tr" viewBox="0 0 100 150"><path d="M50 4 L80 46 L62 46 L88 86 L66 86 L50 150 L34 86 L12 86 L38 46 L20 46 Z" fill="#160d0b"/></svg>
+      <svg class="ds-tree tc" viewBox="0 0 120 150">
+        <rect x="56" y="82" width="10" height="68" fill="#1a0f0a"/>
+        <circle cx="61" cy="58" r="40" fill="#1a0f0a"/>
+        <circle cx="38" cy="70" r="26" fill="#1a0f0a"/>
+        <circle cx="84" cy="70" r="26" fill="#1a0f0a"/>
+      </svg>
+
+      <div id="ds-campfire">
+        <svg viewBox="0 0 120 120">
+          <circle class="fire-glow" cx="60" cy="70" r="42" fill="#ff7a1e" opacity="0.22"/>
+          <g class="logs">
+            <rect x="30" y="86" width="62" height="12" rx="5" fill="#3a2316" transform="rotate(-9 60 92)"/>
+            <rect x="30" y="86" width="62" height="12" rx="5" fill="#4a2c1a" transform="rotate(9 60 92)"/>
+          </g>
+          <path class="flame f1" d="M60 28 C72 46 78 56 78 68 C78 82 69 90 60 90 C51 90 42 82 42 68 C42 56 48 46 60 28 Z" fill="#ff8a1e"/>
+          <path class="flame f2" d="M60 46 C68 56 71 64 71 72 C71 80 66 86 60 86 C54 86 49 80 49 72 C49 64 52 56 60 46 Z" fill="#ffd23e"/>
+          <path class="flame f3" d="M60 58 C65 64 67 70 67 74 C67 79 64 82 60 82 C56 82 53 79 53 74 C53 70 55 64 60 58 Z" fill="#fff3c4"/>
+        </svg>
+        <div id="ds-embers"></div>
+      </div>
+
+      <div id="ds-leaves"></div>
+    </div>
+
+    <video id="ds-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+      <source src="/media/ds_trailer_full.mp4" type="video/mp4">
+    </video>
+
+    <div id="ds-veil" aria-hidden="true"></div>
+
+    <div class="landing-inner">
+      <div class="landing-kicker">// DON'T STARVE · AGENT SHOWCASE</div>
+      <h1 class="landing-title">三版本 Agent 对比</h1>
+      <p class="landing-sub">同一任务 · 三种编排 · 一屏并排对比</p>
+      <pre id="boot-log" class="boot-log"></pre>
+      <button id="enter-btn" class="enter-big" disabled>进入系统 [ ENTER ]</button>
+      <div class="landing-hint">点击任意处跳过动画 · 按 Enter 进入</div>
+    </div>
+
+    <div id="live-cam" class="live-cam">
+      <div class="cam-head"><span class="rec-dot"></span>角色原画 · DON'T STARVE</div>
+      <div class="cam-shot" id="cam-shot"></div>
+      <div class="cam-bar">
+        <span class="cam-label" id="cam-label">…</span>
+        <span class="cam-time" id="cam-time">--:--:--</span>
+      </div>
+    </div>
+
+    <div id="scene-ctl" class="scene-ctl">
+      <button class="scene-tab active" data-mode="scene" type="button">🔥 篝火场景</button>
+      <button class="scene-tab" data-mode="video" type="button">🎬 预告片</button>
+      <button id="sound-toggle" type="button" class="scene-sound hidden">🔊 开声音</button>
+    </div>
+
+    <div id="ext-links" class="ext-links">
+      <a href="https://www.klei.com/publishing" target="_blank" rel="noopener">🏠 KLEI 官网 ↗</a>
+      <a href="https://dontstarve.huijiwiki.com/wiki/%E9%A5%A5%E8%8D%92" target="_blank" rel="noopener">📖 饥荒 Wiki ↗</a>
+    </div>
+  </main>
+
+  <!-- 微信登录 -->
+  <main id="login" class="view hidden">
+    <div class="login-panel panel term">
+      <div class="login-kicker">// WECHAT AUTH</div>
+      <h1>微信登录<span class="blink">▮</span></h1>
+      <p class="login-sub">登录后，你的对话历史会按账号单独保存</p>
+      <button class="login-btn" id="login-btn-wx" onclick="wxLogin()">🐧 微信扫码登录</button>
+      <button class="login-btn login-btn-google" id="login-btn-google" onclick="googleLogin()">🔐 Google 登录</button>
+      <div id="login-qr" class="login-qr hidden"></div>
+      <div id="login-msg" class="login-msg"></div>
+      <button class="back login-skip" onclick="goHome()">← 跳过，先以游客身份进入</button>
+      <div class="login-hint">登录可选 · 不登录也能正常使用（历史按游客保存）</div>
+    </div>
+  </main>
+
+  <!-- 主页 -->
+  <main id="home" class="view hidden">
+    <header class="hero">
+      <div class="sys-bar">
+        <span><b>SYS://</b>AGENT_COMPARE</span>
+        <span>MEM: <b>OK</b></span>
+        <span>GPU: <b>OK</b></span>
+        <span>ENGINES: <b>3</b></span>
+      </div>
+      <div class="prompt-line">$ <span class="path">./agent_versions</span> run --compare</div>
+      <h1>三版本 Agent 对比<span class="blink">▮</span></h1>
+      <p class="sub">同一个「饥荒物品顾问」任务，三种编排方式：<strong>原生手写</strong> / <strong>LangGraph 建图</strong> / <strong>Dify 可视化</strong></p>
+      <div id="auth-bar" class="auth-bar hidden">
+        <img id="auth-avatar" alt="" referrerpolicy="no-referrer">
+        <span id="auth-name"></span>
+        <button class="back" onclick="logout()">退出登录</button>
+      </div>
+      <button id="login-entry" class="back hidden" onclick="openLogin()">🔑 登录</button>
+      <button class="compare-btn" onclick="openCompare()">[ 三版并排对比 ]</button>
+    </header>
+
+    <section class="cards">
+      <article class="card panel term" data-engine="native" data-label="native.py">
+        <div class="tag tag-native">原生版</div>
+        <h2>Native</h2>
+        <p>手写 Python 控制流（<code>if/elif</code>），<code>requests</code> 直调 LLM，工具是直接 <code>import lookup()</code>。零框架、最可控。</p>
+        <button class="enter" onclick="openChat('native')">进入对话 ›</button>
+      </article>
+
+      <article class="card panel term" data-engine="langgraph" data-label="langgraph.py">
+        <div class="tag tag-langgraph">LangGraph 版</div>
+        <h2>LangGraph</h2>
+        <p><code>StateGraph</code> 把「意图 → 工具 → 回答」显式建模成节点 + 条件边，状态在 <code>TypedDict</code> 里流转。</p>
+        <button class="enter" onclick="openChat('langgraph')">进入对话 ›</button>
+      </article>
+
+      <article class="card panel term" data-engine="dify" data-label="dify_brain.py">
+        <div class="tag tag-dify">Dify 版 · 游戏大脑</div>
+        <h2>Dify 游戏大脑</h2>
+        <p>不是物品问答，而是接入你真实游戏的生存大脑（Dify 链 app <code>3ff0efd8</code>）：规划 → 建议 → GLM 决策动作 → 回灌 <code>state_api</code>。</p>
+        <div class="card-actions">
+          <button class="enter" onclick="openBrain()">打开游戏大脑控制台 ›</button>
+          <a class="link-out" id="dify-link" target="_blank" rel="noopener">在 Dify 打开 ↗</a>
+        </div>
+      </article>
+    </section>
+
+    <footer class="foot">
+      三版对同一输入应输出<em>语义等价</em>的回答 —— 证明「同一功能，三种编排」。
+    </footer>
+  </main>
+
+  <!-- 并排对比页 -->
+  <main id="compare" class="view hidden">
+    <header class="chat-head">
+      <button class="back" onclick="goHome()">← 返回主页</button>
+      <div class="chat-title"><h2>三版并排对比</h2></div>
+      <span class="spacer"></span>
+    </header>
+
+    <form id="cmp-form" class="composer" autocomplete="off">
+      <span class="prompt">❯</span>
+      <input id="cmp-input" type="text" placeholder="同一个问题同时问三个引擎，如：草帽怎么合成？ / 木甲防御多少？ / 今天天气如何？" />
+      <button id="cmp-send" type="submit">对比</button>
+    </form>
+
+    <p id="cmp-question" class="cmp-question"></p>
+
+    <div id="cmp-grid" class="cmp-grid">
+      <section class="cmp-col term" data-engine="native" data-label="native.out">
+        <header class="cmp-head">
+          <span class="tag tag-native">原生版</span>
+          <span class="elapsed" id="time-native"></span>
+        </header>
+        <h3>Native</h3>
+        <div class="cmp-body" id="body-native"><p class="hint">等待对比…</p></div>
+      </section>
+
+      <section class="cmp-col term" data-engine="langgraph" data-label="langgraph.out">
+        <header class="cmp-head">
+          <span class="tag tag-langgraph">LangGraph 版</span>
+          <span class="elapsed" id="time-langgraph"></span>
+        </header>
+        <h3>LangGraph</h3>
+        <div class="cmp-body" id="body-langgraph"><p class="hint">等待对比…</p></div>
+      </section>
+
+      <section class="cmp-col term" data-engine="dify" data-label="dify.out">
+        <header class="cmp-head">
+          <span class="tag tag-dify">Dify 版</span>
+          <span class="elapsed" id="time-dify"></span>
+        </header>
+        <h3>Dify</h3>
+        <div class="cmp-body" id="body-dify"><p class="hint">等待对比…</p></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- 游戏大脑控制台 -->
+  <main id="brain" class="view hidden">
+    <header class="chat-head">
+      <button class="back" onclick="goHome()">← 返回主页</button>
+      <div class="chat-title">
+        <span class="tag tag-dify">Dify 游戏大脑</span>
+        <h2>游戏大脑控制台</h2>
+      </div>
+      <span class="spacer"></span>
+    </header>
+
+    <div class="brain-layout">
+      <section class="brain-panel term" data-label="state.log">
+        <h3>游戏状态</h3>
+        <div id="brain-state" class="brain-state">读取中…</div>
+        <div class="brain-meta">
+          <div>目标 <span id="brain-goal">—</span></div>
+          <div>上轮动作 <span id="brain-last">—</span></div>
+          <div>最近动作结果 <span id="brain-result">—</span></div>
+        </div>
+        <button id="brain-refresh" class="back" onclick="loadBrainState()">刷新状态</button>
+      </section>
+
+      <section class="brain-panel brain-main term" data-label="brain.out">
+        <h3>大脑输出</h3>
+        <form id="brain-form" class="composer" autocomplete="off">
+          <span class="prompt">❯</span>
+          <input id="brain-input" type="text" placeholder="给游戏里的小人下指令：我饿了怎么办 / 去采集木材 / 有怪打我" />
+          <button id="brain-send" type="submit">执行</button>
+        </form>
+        <div id="brain-out" class="brain-out"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- 对话页 -->
+  <main id="chat" class="view hidden">
+    <header class="chat-head">
+      <button class="back" onclick="goHome()">← 返回主页</button>
+      <div class="chat-title">
+        <span id="chat-badge" class="tag"></span>
+        <h2 id="chat-name"></h2>
+      </div>
+      <span class="spacer"></span>
+      <button class="back" id="clear-chat" onclick="clearHistory()" title="清空本引擎的历史记录">🗑 清空</button>
+    </header>
+
+    <div id="log" class="log"></div>
+
+    <form id="form" class="composer" autocomplete="off">
+      <span class="prompt">❯</span>
+      <input id="input" type="text" placeholder="试试：草帽怎么合成？ / 木甲防御多少？ / 今天天气如何？" />
+      <button id="send" type="submit">发送</button>
+    </form>
+  </main>
+
+  <!-- 游客额度角标 -->
+  <div id="quota-badge" class="quota-badge hidden"></div>
+
+  <!-- 拼图滑块人机验证（仅游客） -->
+  <div id="slider-modal" class="slider-modal hidden">
+    <div class="slider-box">
+      <div class="slider-head">
+        <span class="slider-title">⟳ HUMAN VERIFY</span>
+        <span style="display:flex;align-items:center;gap:10px;">
+          <span class="slider-timer" id="slider-timer">⏱ 30s</span>
+          <button class="slider-close" onclick="cancelSlider()" title="关闭">✕</button>
+        </span>
+      </div>
+      <canvas id="captcha-canvas" width="300" height="160"></canvas>
+      <div class="slider-track" id="slider-track">
+        <div class="slider-fill" id="slider-fill"></div>
+        <div class="slider-track-text" id="slider-track-text">➜ 向右拖动滑块完成拼图</div>
+        <div class="slider-handle" id="slider-handle"><span>➜</span></div>
+      </div>
+      <div class="slider-foot">
+        <span class="slider-msg" id="slider-msg"></span>
+        <span class="slider-attempts" id="slider-attempts">剩余 ▮▮▮</span>
+        <button class="slider-refresh" onclick="capRefresh()" title="换一张">⟳ 换一张</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

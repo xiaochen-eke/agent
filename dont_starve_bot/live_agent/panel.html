@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>饥荒 live_agent 控制面板</title>
+<style>
+  :root {
+    --gold: #d4af37;
+    --gold-dim: #a8862a;
+    --bg: #14100e;
+    --bg-2: #1c1712;
+    --card: #241d15;
+    --card-2: #2a221a;
+    --border: rgba(212, 175, 55, 0.22);
+    --text: #e8e0d0;
+    --muted: #9a8f7a;
+    --green: #4ade80;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --blue: #60a5fa;
+    --purple: #c084fc;
+    --mono: 'SF Mono', 'Cascadia Code', Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background:
+      radial-gradient(1200px 600px at 20% -10%, rgba(212,175,55,0.08), transparent 60%),
+      radial-gradient(1000px 700px at 100% 110%, rgba(120,60,40,0.12), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ===== 顶栏 ===== */
+  .topbar {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    background: linear-gradient(180deg, rgba(40,32,22,0.98), rgba(28,23,18,0.98));
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+  }
+  .topbar .logo { font-size: 20px; }
+  .topbar h1 { font-size: 16px; font-weight: 700; color: var(--gold); letter-spacing: 1px; }
+  .topbar .sub { font-size: 11px; color: var(--muted); }
+  .topbar .spacer { flex: 1; }
+  .pill {
+    font-size: 11px; padding: 3px 10px; border-radius: 12px;
+    border: 1px solid var(--border); color: var(--muted);
+  }
+  .pill.ok { color: var(--green); border-color: rgba(74,222,128,0.35); }
+  .pill.err { color: var(--red); border-color: rgba(239,68,68,0.35); }
+  .legend { display: flex; gap: 10px; font-size: 11px; color: var(--muted); align-items: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  .dot.low { background: var(--green); }
+  .dot.med { background: var(--orange); }
+  .dot.high { background: var(--red); }
+
+  /* ===== 三栏布局 ===== */
+  .grid {
+    display: grid;
+    grid-template-columns: 300px 1fr 320px;
+    gap: 12px;
+    height: calc(100vh - 52px);
+    padding: 12px;
+  }
+  .col {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .col-head {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(212,175,55,0.06), transparent);
+    letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .col-body { flex: 1; overflow-y: auto; padding: 12px; }
+
+  /* ===== 左栏：状态 ===== */
+  .stat-row { margin-bottom: 14px; }
+  .stat-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: var(--muted); }
+  .stat-label b { color: var(--text); font-weight: 600; }
+  .bar { height: 10px; background: rgba(0,0,0,0.4); border-radius: 6px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 6px; transition: width 0.4s ease; }
+  .bar.hp > i { background: linear-gradient(90deg, #a53b3b, #ef4444); }
+  .bar.hunger > i { background: linear-gradient(90deg, #8a6a1f, #e8b03a); }
+  .bar.sanity > i { background: linear-gradient(90deg, #7a4fb0, #b088ff); }
+  .bar.temp > i { background: linear-gradient(90deg, #2f6fa5, #60a5fa); }
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .meta-cell { background: var(--card-2); border: 1px solid rgba(0,0,0,0.3); border-radius: 8px; padding: 8px 10px; }
+  .meta-cell .k { font-size: 10px; color: var(--muted); }
+  .meta-cell .v { font-size: 14px; font-weight: 700; color: var(--gold); }
+  .list-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 10px 0 6px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag {
+    font-size: 11px; padding: 3px 9px; border-radius: 12px;
+    background: rgba(212,175,55,0.08); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono);
+  }
+  .tag .n { color: var(--gold); margin-left: 3px; font-weight: 700; }
+  .empty { font-size: 11px; color: var(--muted); font-style: italic; }
+
+  /* ===== 中栏：对话流 ===== */
+  .timeline { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+  .ev { max-width: 82%; padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.55; animation: pop 0.25s ease; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .ev.user { align-self: flex-end; background: linear-gradient(135deg, #2a4a3a, #1c3328); border: 1px solid rgba(74,222,128,0.25); border-bottom-right-radius: 2px; }
+  .ev.advice { align-self: flex-start; background: linear-gradient(135deg, #2a3a4a, #1c2733); border: 1px solid rgba(96,165,250,0.22); border-bottom-left-radius: 2px; }
+  .ev.sys { align-self: center; background: var(--card-2); border: 1px solid var(--border); font-size: 12px; padding: 5px 12px; color: var(--muted); }
+  .ev .meta { font-size: 10px; color: var(--muted); margin-bottom: 3px; display: flex; gap: 6px; align-items: center; }
+  .badge { font-size: 10px; padding: 1px 7px; border-radius: 9px; font-weight: 700; }
+  .badge.user { background: rgba(74,222,128,0.15); color: var(--green); }
+  .badge.advice { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .badge.action { background: rgba(212,175,55,0.15); color: var(--gold); }
+  .badge.result-ok { background: rgba(74,222,128,0.15); color: var(--green); }
+  .badge.result-fail { background: rgba(239,68,68,0.15); color: var(--red); }
+  .ev .verb { font-family: var(--mono); color: var(--gold); }
+  .chat-input { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.15); }
+  .chat-input textarea {
+    flex: 1; resize: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 9px 11px; font-size: 13px; font-family: inherit;
+    height: 40px; line-height: 1.4;
+  }
+  .chat-input textarea:focus { outline: none; border-color: var(--gold); }
+  .btn {
+    border: none; cursor: pointer; border-radius: 8px; font-weight: 700;
+    padding: 0 16px; font-size: 13px; transition: all 0.15s ease; letter-spacing: 1px;
+  }
+  .btn-gold { background: linear-gradient(135deg, var(--gold), #b8922a); color: #1a1200; }
+  .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(212,175,55,0.4); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ===== 右栏：动作 ===== */
+  .action-box { margin-bottom: 14px; }
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+  .field input {
+    width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: var(--mono);
+  }
+  .field input:focus { outline: none; border-color: var(--gold); }
+  .verbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .verb-btn {
+    background: var(--card-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 8px 4px; cursor: pointer; font-size: 12px; text-align: center;
+    transition: all 0.15s ease;
+  }
+  .verb-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .verb-btn.risk-high { border-color: rgba(239,68,68,0.5); }
+  .verb-btn.risk-high:hover { background: rgba(239,68,68,0.12); color: var(--red); }
+  .verb-btn .risk-dot { display: block; font-size: 9px; color: var(--muted); margin-top: 2px; }
+  .verb-btn.risk-high .risk-dot { color: var(--red); }
+  .log-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 6px 0 8px; }
+  .log { display: flex; flex-direction: column; gap: 7px; }
+  .log-item { background: var(--card-2); border: 1px solid rgba(0,0,0,0.3); border-radius: 8px; padding: 7px 10px; font-size: 12px; }
+  .log-item .row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+  .log-item .verb-name { font-family: var(--mono); color: var(--gold); font-weight: 700; }
+  .log-item .status { font-size: 10px; padding: 1px 7px; border-radius: 9px; font-weight: 700; }
+  .status.queued { background: rgba(212,175,55,0.12); color: var(--gold); }
+  .status.done { background: rgba(74,222,128,0.15); color: var(--green); }
+  .status.failed { background: rgba(239,68,68,0.15); color: var(--red); }
+  .log-item .reason { font-size: 11px; color: var(--muted); }
+  .log-item .time { font-size: 10px; color: var(--muted); }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.25); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.45); }
+
+  @media (max-width: 960px) {
+    .grid { grid-template-columns: 1fr; overflow-y: auto; }
+    body { overflow: auto; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">🍖</span>
+    <div>
+      <h1>饥荒 live_agent 控制面板</h1>
+      <div class="sub">DST 实时生存 co-pilot · state_api :5002</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="legend">
+      <span><span class="dot low"></span>低风险</span>
+      <span><span class="dot med"></span>中风险</span>
+      <span><span class="dot high"></span>高风险</span>
+    </div>
+    <span id="conn" class="pill">连接中…</span>
+  </div>
+
+  <div class="grid">
+    <!-- 左栏：实时状态 -->
+    <div class="col">
+      <div class="col-head">📊 实时状态</div>
+      <div class="col-body" id="leftCol"><div class="empty">等待游戏状态…</div></div>
+    </div>
+
+    <!-- 中栏：对话流 -->
+    <div class="col">
+      <div class="col-head">💬 对话流 <span style="font-size:10px;color:var(--muted);font-weight:400">（AI 建议 · 动作结果）</span></div>
+      <div class="col-body">
+        <div class="timeline" id="timeline"></div>
+      </div>
+      <div class="chat-input">
+        <textarea id="msgInput" placeholder="给 AI 下指令，如「帮我找点吃的」…（Enter 发送，Shift+Enter 换行）"></textarea>
+        <button class="btn btn-gold" id="sendBtn">发送</button>
+      </div>
+    </div>
+
+    <!-- 右栏：动作控制 -->
+    <div class="col">
+      <div class="col-head">🎮 手动动作</div>
+      <div class="col-body">
+        <div class="action-box">
+          <div class="field">
+            <label>prefab（目标物品/生物名）</label>
+            <input id="prefabInput" list="prefabList" placeholder="如 seeds / torch / spider" autocomplete="off">
+            <datalist id="prefabList"></datalist>
+          </div>
+          <div class="verbs" id="verbs"></div>
+        </div>
+        <div class="log-title">动作日志</div>
+        <div class="log" id="actionLog"><div class="empty">暂无动作</div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const API = location.origin;           // 同源，即 state_api :5002
+const VERBS = [
+  { key: 'eat',    label: '吃',     risk: 'low',  source: 'inventory' },
+  { key: 'equip',  label: '装备',   risk: 'low',  source: 'inventory' },
+  { key: 'drop',   label: '丢弃',   risk: 'low',  source: 'inventory' },
+  { key: 'pickup', label: '拾取',   risk: 'low',  source: 'nearby' },
+  { key: 'craft',  label: '合成',   risk: 'med',  source: 'inventory' },
+  { key: 'sleep',  label: '睡觉',   risk: 'med',  source: 'nearby' },
+  { key: 'chop',   label: '砍树',   risk: 'med',  source: 'nearby' },
+  { key: 'mine',   label: '挖矿',   risk: 'low',  source: 'nearby' },
+  { key: 'harvest',label: '采集',   risk: 'low',  source: 'nearby' },
+  { key: 'attack', label: '攻击',   risk: 'high', source: 'nearby' },
+];
+const RISK_CN = { low: '低', med: '中', high: '高' };
+
+let lastState = null;
+let lastEventCount = -1;
+
+function fmt(v) { return (v === null || v === undefined) ? '?' : v; }
+
+// ===== 左栏渲染 =====
+function renderLeft(state) {
+  const el = document.getElementById('leftCol');
+  if (!state || state.status === 'empty' || !state.state) {
+    el.innerHTML = '<div class="empty">等待游戏状态…（先启动 game + mod + bridge）</div>';
+    return;
+  }
+  const raw = state.state;
+  const world = raw.world || {};
+  const players = raw.players || [];
+  const p = (Array.isArray(players) ? players : Object.values(players))[0] || {};
+  const inv = p.inventory || {};
+  const nearby = p.nearby || {};
+
+  const season = { autumn: '秋', winter: '冬', spring: '春', summer: '夏' }[world.season] || '?';
+  const phase = { day: '白天', dusk: '黄昏', night: '夜晚' }[world.phase] || '?';
+
+  function bar(cls, label, val, max) {
+    const pct = (max && val != null) ? Math.min(100, Math.max(0, val / max * 100)) : 0;
+    return `<div class="stat-row">
+      <div class="stat-label"><span>${label}</span><b>${fmt(val)}${max ? '/' + max : ''}</b></div>
+      <div class="bar ${cls}"><i style="width:${pct}%"></i></div>
+    </div>`;
+  }
+
+  const tags = (obj, emptyText) => {
+    const keys = Object.keys(obj || {});
+    if (!keys.length) return `<div class="empty">${emptyText}</div>`;
+    return `<div class="tags">` + keys.map(k => `<span class="tag">${k}<span class="n">×${obj[k]}</span></span>`).join('') + `</div>`;
+  };
+
+  el.innerHTML = `
+    <div class="meta-grid">
+      <div class="meta-cell"><div class="k">季节</div><div class="v">${season}</div></div>
+      <div class="meta-cell"><div class="k">时段</div><div class="v">${phase}</div></div>
+      <div class="meta-cell"><div class="k">天数</div><div class="v">${fmt(world.day)}</div></div>
+      <div class="meta-cell"><div class="k">角色</div><div class="v">${p.prefab || '?'}</div></div>
+    </div>
+    ${bar('hp', '生命', p.health, p.maxhealth)}
+    ${bar('hunger', '饥饿', p.hunger, 150)}
+    ${bar('sanity', '精神', p.sanity, 200)}
+    ${bar('temp', '体温', p.temperature, 70)}
+    <div class="list-title">🎒 背包</div>
+    ${tags(inv, '空')}
+    <div class="list-title">📍 附近</div>
+    ${tags(nearby, '无')}
+  `;
+}
+
+// ===== 中栏时间线 =====
+function renderTimeline(events) {
+  const el = document.getElementById('timeline');
+  if (!events || !events.length) {
+    el.innerHTML = '<div class="empty" style="align-self:center;margin:auto">还没有对话，发条指令试试</div>';
+    return;
+  }
+  const html = events.map(ev => {
+    const t = new Date(ev.ts * 1000).toLocaleTimeString();
+    if (ev.type === 'user') {
+      return `<div class="ev user"><div class="meta"><span class="badge user">我</span><span>${t}</span></div>${esc(ev.text)}</div>`;
+    }
+    if (ev.type === 'advice') {
+      const src = ev.source === 'dify' ? 'Dify' : (ev.source === 'rule' ? '规则' : (ev.source || 'AI'));
+      return `<div class="ev advice"><div class="meta"><span class="badge advice">${src}</span><span>${t}</span></div>${esc(ev.text)}</div>`;
+    }
+    if (ev.type === 'action') {
+      return `<div class="ev sys"><span class="badge action">动作</span> <span class="verb">${esc(ev.verb)} ${esc(ev.prefab)}</span> · 风险 ${RISK_CN[ev.risk] || ev.risk}</div>`;
+    }
+    if (ev.type === 'result') {
+      const cls = ev.ok ? 'result-ok' : 'result-fail';
+      const lbl = ev.ok ? '✅' : '❌';
+      return `<div class="ev sys"><span class="badge ${cls}">${lbl} 结果</span> <span class="verb">${esc(ev.verb)} ${esc(ev.prefab)}</span> ${esc(ev.reason)}</div>`;
+    }
+    return '';
+  }).join('');
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ===== 右栏动作日志 =====
+function renderActionLog(events) {
+  const el = document.getElementById('actionLog');
+  const acts = (events || []).filter(e => e.type === 'action' || e.type === 'result');
+  if (!acts.length) { el.innerHTML = '<div class="empty">暂无动作</div>'; return; }
+  // 合并 action 与 result：以 action 为骨架，result 追加状态
+  const byId = {};
+  const order = [];
+  (events || []).forEach(ev => {
+    if (ev.type === 'action') { byId[ev.id] = { ...ev }; order.push(ev.id); }
+    else if (ev.type === 'result') { if (byId[ev.id]) { byId[ev.id].status = ev.ok ? 'done' : 'failed'; byId[ev.id].reason = ev.reason; } }
+  });
+  el.innerHTML = order.slice().reverse().map(id => {
+    const a = byId[id];
+    if (!a) return '';
+    const t = new Date(a.ts * 1000).toLocaleTimeString();
+    return `<div class="log-item">
+      <div class="row1"><span class="verb-name">${esc(a.verb)} ${esc(a.prefab)}</span><span class="status ${a.status || 'queued'}">${ {queued:'排队',done:'成功',failed:'失败'}[a.status] || '排队' }</span></div>
+      ${a.reason ? `<div class="reason">${esc(a.reason)}</div>` : ''}
+      <div class="time">${t} · ${RISK_CN[a.risk] || '低'}风险</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== prefab 下拉 + 动作按钮 =====
+function refreshDatalist() {
+  const dl = document.getElementById('prefabList');
+  const p = (lastState && lastState.state) ? ((Array.isArray(lastState.state.players) ? lastState.state.players : Object.values(lastState.state.players || {}))[0] || {}) : {};
+  const inv = Object.keys(p.inventory || {});
+  const nearby = Object.keys(p.nearby || {});
+  const set = [...new Set([...inv, ...nearby])];
+  dl.innerHTML = set.map(k => `<option value="${esc(k)}">`).join('');
+}
+
+function buildVerbs() {
+  const box = document.getElementById('verbs');
+  box.innerHTML = VERBS.map(v => `
+    <button class="verb-btn ${v.risk === 'high' ? 'risk-high' : ''}" data-verb="${v.key}" data-risk="${v.risk}" data-source="${v.source}">
+      ${v.label}<span class="risk-dot">${RISK_CN[v.risk]}风险</span>
+    </button>`).join('');
+  box.querySelectorAll('.verb-btn').forEach(b => {
+    b.addEventListener('click', () => doAction(b.dataset.verb, b.dataset.risk, b.dataset.source));
+  });
+}
+
+async function doAction(verb, risk, source) {
+  const prefab = document.getElementById('prefabInput').value.trim();
+  if (verb !== 'sleep' && !prefab) { alert('请先在上方填写 prefab（目标物品/生物名）'); return; }
+  if (risk === 'high') {
+    if (!confirm(`⚠️ 高风险动作：${verb} ${prefab || ''}\n确认执行？（游戏内还会再弹一次 Y/N）`)) return;
+  }
+  try {
+    const r = await fetch(API + '/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verb, prefab }),
+    });
+    const d = await r.json();
+    if (d.status === 'ok') {
+      flash(`已推动作 ${verb} ${prefab}（#${d.id}，${RISK_CN[d.risk] || '低'}风险）`);
+      refreshSnapshot();
+    } else {
+      flash('❌ ' + (d.message || '推送失败'));
+    }
+  } catch (e) { flash('❌ 请求失败: ' + e.message); }
+}
+
+// ===== 轮询 =====
+async function refreshSnapshot() {
+  try {
+    const r = await fetch(API + '/panel/snapshot');
+    const d = await r.json();
+    lastState = { status: d.state ? 'ok' : 'empty', state: d.state };
+    renderLeft(d);
+    const events = d.events || [];
+    renderTimeline(events);
+    renderActionLog(events);
+    refreshDatalist();
+    setConn(true);
+  } catch (e) {
+    setConn(false);
+  }
+}
+
+function setConn(ok) {
+  const c = document.getElementById('conn');
+  c.textContent = ok ? '● 已连接' : '● 断开';
+  c.className = 'pill ' + (ok ? 'ok' : 'err');
+}
+
+function flash(msg) {
+  // 简单提示：塞一条临时系统事件到时间线（不持久化）
+  const tl = document.getElementById('timeline');
+  const div = document.createElement('div');
+  div.className = 'ev sys';
+  div.textContent = msg;
+  tl.appendChild(div);
+  tl.scrollTop = tl.scrollHeight;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ===== 发送消息 =====
+async function sendMessage() {
+  const inp = document.getElementById('msgInput');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  try {
+    await fetch(API + '/panel/message', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+    });
+    refreshSnapshot();
+  } catch (e) { flash('❌ 发送失败: ' + e.message); }
+}
+
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+document.getElementById('msgInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// ===== 启动 =====
+buildVerbs();
+refreshSnapshot();
+setInterval(refreshSnapshot, 1500);
+</script>
+</body>
+</html>

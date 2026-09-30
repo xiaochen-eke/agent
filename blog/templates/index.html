@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="posts-head">
+  <h1 class="term-h1">{{ heading or "最新文章" }}<span class="cursor">▌</span></h1>
+  {% if total %}<span class="count">共 {{ total }} 篇</span>{% endif %}
+</section>
+
+{% if posts %}
+  <div class="post-list">
+  {% for p in posts %}
+    <article class="post-card panel">
+      <a class="post-title" href="{{ url_for('post_view', pid=p.id) }}">{{ p.title }}</a>
+      <div class="post-meta">
+        <span>{{ p.published_at|dt }}</span>
+        <span class="dot">·</span>
+        <span>{{ p.category }}</span>
+        {% if p.tags %}<span class="dot">·</span><span>{{ p.tags }}</span>{% endif %}
+      </div>
+      <p class="post-summary">{{ p.summary }}</p>
+      <a class="more" href="{{ url_for('post_view', pid=p.id) }}">阅读全文 →</a>
+    </article>
+  {% endfor %}
+  </div>
+
+  {% if pages > 1 %}
+  <nav class="pager">
+    {% if page > 1 %}<a href="?page={{ page-1 }}">← 上一页</a>{% endif %}
+    <span class="pager-info">{{ page }} / {{ pages }}</span>
+    {% if page < pages %}<a href="?page={{ page+1 }}">下一页 →</a>{% endif %}
+  </nav>
+  {% endif %}
+{% else %}
+  <div class="empty">// 暂无内容</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} · {{ site_title }}{% endblock %}
+{% block content %}
+<article class="post panel">
+  <h1 class="post-title">{{ post.title }}</h1>
+  <div class="post-meta">
+    <span>{{ post.published_at|dt }}</span>
+    <span class="dot">·</span>
+    <span>{{ post.category }}</span>
+    {% if tags %}<span class="dot">·</span><span>{{ tags|join(' · ') }}</span>{% endif %}
+  </div>
+  <div class="post-body">{{ post.content_html|safe }}</div>
+</article>
+
+<nav class="post-nav">
+  {% if prev_post %}
+    <a class="prev" href="{{ url_for('post_view', pid=prev_post.id) }}">← {{ prev_post.title }}</a>
+  {% else %}<span class="prev empty"></span>{% endif %}
+  {% if next_post %}
+    <a class="next" href="{{ url_for('post_view', pid=next_post.id) }}">{{ next_post.title }} →</a>
+  {% else %}<span class="next empty"></span>{% endif %}
+</nav>
+
+<section class="comments panel">
+  <h2 class="term-h2">// 评论</h2>
+  {% if comments %}
+    {% for c in comments %}
+      <div class="comment">
+        <div class="comment-head"><b>{{ c.author }}</b><span>{{ c.created_at|dt }}</span></div>
+        <p class="comment-body">{{ c.content }}</p>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="empty">暂无评论，说点什么吧。</p>
+  {% endif %}
+
+  <form class="comment-form" method="post" action="{{ url_for('post_comment', pid=post.id) }}">
+    <input type="text" name="website" class="honeypot" tabindex="-1" autocomplete="off" placeholder="website">
+    <input type="text" name="author" placeholder="昵称（可选）" maxlength="40">
+    <textarea name="content" placeholder="写下你的评论…" required maxlength="2000"></textarea>
+    <button type="submit">提交评论</button>
+  </form>
+</section>
+{% endblock %}

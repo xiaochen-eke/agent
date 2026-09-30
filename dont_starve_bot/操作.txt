@@ -1,0 +1,6 @@
+python game_data_api.py
+python app.py
+npm start
+
+项目二启动
+python START_ALL.py

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}归档 · {{ site_title }}{% endblock %}
+{% block content %}
+<section class="posts-head"><h1 class="term-h1">归档<span class="cursor">▌</span></h1></section>
+{% if groups %}
+  {% for month, posts in groups.items() %}
+  <section class="archive-month">
+    <h2 class="term-h2">{{ month }}</h2>
+    <ul class="archive-list panel">
+      {% for p in posts %}
+        <li>
+          <a href="{{ url_for('post_view', pid=p.id) }}">{{ p.title }}</a>
+          <span class="archive-date">{{ p.published_at|dt }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+{% else %}
+  <div class="empty">// 暂无内容</div>
+{% endif %}
+{% endblock %}

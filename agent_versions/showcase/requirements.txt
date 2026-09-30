@@ -1,0 +1,8 @@
+flask
+requests
+PyJWT
+SQLAlchemy
+PyMySQL
+cryptography
+qrcode
+Pillow

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小A · 电脑管家</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #111111;
+    --panel-2: #161616;
+    --border: #262626;
+    --text: #d4d4d4;
+    --muted: #6b7280;
+    --green: #4ade80;
+    --green-dim: #14532d;
+    --blue: #60a5fa;
+    --cyan: #22d3ee;
+    --red: #ef4444;
+    --yellow: #facc15;
+    --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.6;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* 顶部栏 */
+  .topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .title { font-weight: 600; color: var(--green); letter-spacing: 0.5px; font-size: 15px; }
+  .title .cursor { animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .spacer { flex: 1; }
+  .persona-select {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-family: var(--mono); font-size: 13px;
+    cursor: pointer; outline: none;
+  }
+  .persona-select:focus { border-color: var(--green); }
+  .reset-btn {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 12px; font-family: var(--mono); font-size: 13px;
+    cursor: pointer; transition: all .15s;
+  }
+  .reset-btn:hover { color: var(--red); border-color: var(--red); }
+
+  /* 对话流 */
+  .stream {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .stream::-webkit-scrollbar { width: 8px; }
+  .stream::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 4px; }
+
+  .row { display: flex; animation: appear .25s ease-out; }
+  @keyframes appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .row.user { justify-content: flex-end; }
+  .bubble {
+    max-width: 78%; padding: 10px 14px; border-radius: 10px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .row.user .bubble { background: #1e3a5f; border: 1px solid #2c5282; border-bottom-right-radius: 3px; }
+  .row.agent .bubble { background: var(--panel-2); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+  .row.agent .bubble strong { color: var(--yellow); }
+
+  /* 命令卡片 */
+  .cmd-card {
+    background: var(--panel); border: 1px solid #2f2f2f; border-radius: 10px;
+    overflow: hidden; max-width: 86%;
+  }
+  .cmd-card.danger { border-color: rgba(239,68,68,.6); }
+  .cmd-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 14px; font-size: 12px; color: var(--muted);
+    background: var(--panel-2); border-bottom: 1px solid var(--border);
+  }
+  .cmd-head .fn { color: var(--cyan); }
+  .cmd-warn { color: var(--red); margin-left: auto; font-weight: 600; }
+  .cmd-body {
+    padding: 10px 14px; font-family: var(--mono); color: var(--green);
+    white-space: pre-wrap; word-break: break-all; font-size: 13px;
+  }
+  .cmd-card.danger .cmd-body { color: var(--red); }
+  .cmd-actions { display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); }
+  .btn {
+    font-family: var(--mono); font-size: 13px; padding: 6px 16px;
+    border-radius: 6px; cursor: pointer; border: 1px solid var(--border);
+    transition: all .15s;
+  }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.run { background: rgba(74,222,128,.12); color: var(--green); border-color: rgba(74,222,128,.4); }
+  .btn.run:hover:not(:disabled) { background: rgba(74,222,128,.22); }
+  .btn.reject { background: transparent; color: var(--muted); }
+  .btn.reject:hover:not(:disabled) { color: var(--red); border-color: var(--red); }
+  .cmd-result {
+    border-top: 1px solid var(--border); background: #050505;
+    padding: 10px 14px; font-size: 12.5px; color: #b8b8b8;
+    white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow-y: auto;
+  }
+  .cmd-result .status { color: var(--muted); margin-bottom: 6px; }
+  .cmd-result .status.ok { color: var(--green); }
+  .cmd-result .status.rejected { color: var(--yellow); }
+  .cmd-result .status.fail { color: var(--red); }
+  .cmd-result .err { color: var(--red); }
+
+  /* 输入区 */
+  .inputbar {
+    display: flex; gap: 10px; padding: 14px 16px;
+    background: var(--panel); border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .inputbar input {
+    flex: 1; background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-family: var(--mono); font-size: 14px; outline: none;
+  }
+  .inputbar input:focus { border-color: var(--green); }
+  .inputbar input::placeholder { color: #3f3f3f; }
+  .send-btn {
+    background: var(--green); color: #052e16; border: none; border-radius: 8px;
+    padding: 0 22px; font-family: var(--mono); font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: all .15s;
+  }
+  .send-btn:hover:not(:disabled) { filter: brightness(1.1); }
+  .send-btn:disabled { opacity: .45; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="title">xiaoa<span class="cursor">_</span> 电脑管家</div>
+    <div class="spacer"></div>
+    <select class="persona-select" id="personaSelect"></select>
+    <button class="reset-btn" id="resetBtn">新会话</button>
+  </div>
+  <div class="stream" id="stream"></div>
+  <div class="inputbar">
+    <input id="msgInput" type="text" placeholder="输入指令，如：看看当前目录有哪些文件…" autocomplete="off">
+    <button class="send-btn" id="sendBtn">发送</button>
+  </div>
+</div>
+
+<script>
+const stream = document.getElementById('stream');
+const input = document.getElementById('msgInput');
+const sendBtn = document.getElementById('sendBtn');
+const personaSelect = document.getElementById('personaSelect');
+const resetBtn = document.getElementById('resetBtn');
+
+let busy = false;
+let currentPersona = 'buddy';
+
+const DANGER_RE = /\b(del|erase|deltree|rd|rmdir|format|shutdown|taskkill|takeown|icacls)\b/i;
+
+async function loadPersonas() {
+  const r = await fetch('/personas');
+  const map = await r.json();
+  personaSelect.innerHTML = '';
+  for (const [key, label] of Object.entries(map)) {
+    const opt = document.createElement('option');
+    opt.value = key; opt.textContent = label;
+    personaSelect.appendChild(opt);
+  }
+  personaSelect.value = currentPersona;
+}
+
+function scrollBottom() { stream.scrollTop = stream.scrollHeight; }
+
+function addRow(cls) {
+  const row = document.createElement('div');
+  row.className = 'row ' + cls;
+  stream.appendChild(row);
+  return row;
+}
+
+function addText(cls, text) {
+  const row = addRow(cls);
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  b.textContent = text;
+  row.appendChild(b);
+  scrollBottom();
+  return row;
+}
+
+function addUser(text) { addText('user', text); }
+
+function addAgent(text) {
+  const row = addText('agent', text);
+  return row;
+}
+
+function addCommandCard(command) {
+  const row = addRow('agent');
+  const card = document.createElement('div');
+  card.className = 'cmd-card' + (DANGER_RE.test(command) ? ' danger' : '');
+
+  const head = document.createElement('div');
+  head.className = 'cmd-head';
+  head.innerHTML = '<span class="fn">⚙ execute_command</span>';
+  if (DANGER_RE.test(command)) {
+    const w = document.createElement('span');
+    w.className = 'cmd-warn'; w.textContent = '⚠ 危险命令';
+    head.appendChild(w);
+  }
+  card.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'cmd-body';
+  body.textContent = command;
+  card.appendChild(body);
+
+  const actions = document.createElement('div');
+  actions.className = 'cmd-actions';
+  const runBtn = document.createElement('button');
+  runBtn.className = 'btn run'; runBtn.textContent = '▶ 运行';
+  const rejBtn = document.createElement('button');
+  rejBtn.className = 'btn reject'; rejBtn.textContent = '拒绝';
+  actions.appendChild(runBtn); actions.appendChild(rejBtn);
+  card.appendChild(actions);
+
+  row.appendChild(card);
+  scrollBottom();
+
+  const resultDiv = document.createElement('div');
+  resultDiv.className = 'cmd-result';
+  resultDiv.style.display = 'none';
+
+  function disableAll() {
+    runBtn.disabled = true; rejBtn.disabled = true;
+    runBtn.textContent = '执行中…';
+  }
+
+  runBtn.onclick = () => {
+    disableAll();
+    runCommand(card, resultDiv, command, true);
+  };
+  rejBtn.onclick = () => {
+    disableAll();
+    runCommand(card, resultDiv, command, false);
+  };
+}
+
+async function runCommand(card, resultDiv, command, approve) {
+  busy = true;
+  try {
+    const r = await fetch('/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approve }),
+    });
+    const data = await r.json();
+    if (data.error) { addAgent('⚠ ' + data.error); return; }
+
+    // 1) 显示执行结果
+    if (data.executed) {
+      const e = data.executed;
+      resultDiv.style.display = 'block';
+      const st = document.createElement('div');
+      st.className = 'status ' + (e.status === 'ok' ? 'ok' : (e.status === 'rejected' ? 'rejected' : 'fail'));
+      st.textContent = approve
+        ? `$ ${e.command}  →  ${e.status}`
+        : `$ ${e.command}  →  已拒绝执行`;
+      resultDiv.appendChild(st);
+      if (e.stdout) {
+        const out = document.createElement('div');
+        out.textContent = e.stdout;
+        resultDiv.appendChild(out);
+      }
+      if (e.stderr) {
+        const err = document.createElement('div');
+        err.className = 'err'; err.textContent = e.stderr;
+        resultDiv.appendChild(err);
+      }
+      // 结果块插入到卡片底部（actions 之后）
+      card.appendChild(resultDiv);
+      scrollBottom();
+    }
+
+    // 2) 显示模型的下一步
+    if (data.next) {
+      if (data.next.type === 'command') {
+        addCommandCard(data.next.command);
+      } else {
+        addAgent(data.next.content);
+      }
+    }
+  } catch (err) {
+    addAgent('⚠ 请求失败: ' + err.message);
+  } finally {
+    busy = false;
+  }
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text || busy) return;
+  input.value = '';
+  addUser(text);
+  busy = true; sendBtn.disabled = true;
+  try {
+    const r = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, persona: currentPersona }),
+    });
+    const data = await r.json();
+    if (data.error) { addAgent('⚠ ' + data.error); return; }
+    if (data.type === 'command') {
+      addCommandCard(data.command);
+    } else {
+      addAgent(data.content);
+    }
+  } catch (err) {
+    addAgent('⚠ 请求失败: ' + err.message);
+  } finally {
+    busy = false; sendBtn.disabled = false;
+  }
+}
+
+async function resetSession() {
+  currentPersona = personaSelect.value;
+  await fetch('/reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ persona: currentPersona }),
+  });
+  stream.innerHTML = '';
+}
+
+sendBtn.onclick = send;
+input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+personaSelect.addEventListener('change', resetSession);
+resetBtn.onclick = resetSession;
+
+loadPersonas();
+</script>
+</body>
+</html>

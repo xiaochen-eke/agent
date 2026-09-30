@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-bar">
+  <span class="term-h1">{{ '新建文章' if not post else '编辑文章' }}<span class="cursor">▌</span></span>
+  <span><a class="btn" href="{{ url_for('admin_dashboard') }}">← 返回</a></span>
+</div>
+
+<form class="editor panel" method="post">
+  <label>标题
+    <input name="title" value="{{ post.title if post else '' }}" required>
+  </label>
+  <div class="editor-row">
+    <label>分类
+      <input name="category" value="{{ post.category if post else '' }}" placeholder="未分类">
+    </label>
+    <label>标签（逗号分隔）
+      <input name="tags" value="{{ post.tags if post else '' }}" placeholder="python, 随笔">
+    </label>
+    <label>状态
+      <select name="status">
+        <option value="draft" {{ 'selected' if post and post.status == 'draft' else '' }}>草稿</option>
+        <option value="published" {{ 'selected' if post and post.status == 'published' else '' }}>发布</option>
+      </select>
+    </label>
+  </div>
+  <label>正文（Markdown）
+    <textarea name="content_md" rows="18" class="md-input">{{ post.content_md if post else '' }}</textarea>
+  </label>
+  <div class="editor-actions">
+    <button type="submit">保存</button>
+  </div>
+</form>
+{% endblock %}
